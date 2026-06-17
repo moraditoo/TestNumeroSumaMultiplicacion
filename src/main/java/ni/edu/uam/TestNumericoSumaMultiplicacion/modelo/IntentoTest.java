@@ -106,4 +106,7 @@ public class IntentoTest {
     public boolean estaEnProgreso() {
         return estado == EstadoIntento.EN_PROGRESO;
     }
+
+    @OneToMany(mappedBy = "intentoTest")
+    private List<Respuesta> respuestas;
 }

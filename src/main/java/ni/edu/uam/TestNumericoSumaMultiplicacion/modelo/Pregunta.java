@@ -66,4 +66,9 @@ public class Pregunta {
     public boolean verificarRespuesta(String respuesta) {
         return respuestaCorrecta.equalsIgnoreCase(respuesta);
     }
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @DescriptionsList
+    private TestNumerico testNumerico;
+
 }

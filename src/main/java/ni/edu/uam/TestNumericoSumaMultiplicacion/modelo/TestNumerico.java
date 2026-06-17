@@ -34,8 +34,8 @@ public class TestNumerico {
 
     private boolean activo;
 
-    @OneToMany
     @ListProperties("numeroPregunta, operacion")
+    @OneToMany(mappedBy = "testNumerico")
     private List<Pregunta> preguntas = new ArrayList<>();
 
     public List<Pregunta> obtenerPreguntasActivas() {
@@ -59,4 +59,5 @@ public class TestNumerico {
     public void desactivarTest() {
         this.activo = false;
     }
+
 }
