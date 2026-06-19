@@ -25,11 +25,11 @@ public class Respuesta {
     private String respuestaMarcada;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @DescriptionsList
+    @DescriptionsList(descriptionProperties = "numeroPregunta")
     private Pregunta pregunta;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @DescriptionsList
+    @DescriptionsList(descriptionProperties = "idIntentoTest")
     private IntentoTest intentoTest;
 
     public boolean estaEnBlanco() {

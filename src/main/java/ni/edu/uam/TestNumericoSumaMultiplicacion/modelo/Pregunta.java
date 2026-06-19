@@ -41,7 +41,7 @@ public class Pregunta {
     private String respuestaCorrecta;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @DescriptionsList
+    @DescriptionsList(descriptionProperties = "nombreUsuario")
     private Registrador registrador;
 
     public void activar() {

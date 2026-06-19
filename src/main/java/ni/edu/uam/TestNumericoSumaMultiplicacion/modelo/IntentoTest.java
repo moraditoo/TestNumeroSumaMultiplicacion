@@ -27,7 +27,7 @@ public class IntentoTest {
     private Long idIntentoTest;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @DescriptionsList
+    @DescriptionsList(descriptionProperties = "nombreUsuario")
     private Usuario usuario;
 
     @ManyToOne(fetch = FetchType.LAZY)
