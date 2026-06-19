@@ -1,14 +1,13 @@
 package ni.edu.uam.TestNumericoSumaMultiplicacion.modelo;
 
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
+import javax.persistence.*;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+
+import java.util.List;
 
 @Entity
 @Getter
@@ -20,5 +19,8 @@ public class Registrador extends Persona {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long idRegistrador;
+
+    @OneToMany(mappedBy = "registrador")
+    private List<Pregunta> preguntasRegistradas;
 
 }

@@ -1,14 +1,13 @@
 package ni.edu.uam.TestNumericoSumaMultiplicacion.modelo;
 
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
-import javax.persistence.Id;
+import javax.persistence.*;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+
+import java.util.List;
 
 @Entity
 @Getter
@@ -22,5 +21,8 @@ public class Usuario extends Persona {
     private Long idUsuario;
 
     private int edad;
+
+    @OneToMany(mappedBy = "usuario")
+    private List<IntentoTest> intentos;
 
 }
