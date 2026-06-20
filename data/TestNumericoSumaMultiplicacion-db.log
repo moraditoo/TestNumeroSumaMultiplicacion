@@ -1,2 +1,4 @@
-/*C4*/SET SCHEMA PUBLIC
+/*C2*/SET SCHEMA PUBLIC
 DISCONNECT
+/*C3*/SET SCHEMA PUBLIC
+alter table TestNumerico add column tipoTest varchar(255)

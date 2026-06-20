@@ -1,5 +1,6 @@
 package ni.edu.uam.TestNumericoSumaMultiplicacion.modelo;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -34,6 +35,8 @@ public class TestNumerico {
 
     private boolean activo;
 
+    private String tipoTest;
+
     @ListProperties("numeroPregunta, operacion")
     @OneToMany(mappedBy = "testNumerico")
     private List<Pregunta> preguntas = new ArrayList<>();
@@ -45,14 +48,26 @@ public class TestNumerico {
     }
 
     public boolean validarDisponibilidad() {
-        return activo;
+        return activo && !obtenerPreguntasActivas().isEmpty();
     }
 
     public IntentoTest iniciarTest(Usuario usuario) {
-        return new IntentoTest();
+
+        IntentoTest intento = new IntentoTest();
+
+        intento.setUsuario(usuario);
+        intento.setTestNumerico(this);
+        intento.setCantidadPreguntas(obtenerPreguntasActivas().size());
+
+        intento.iniciar();
+
+        return intento;
     }
 
     public void agregarPregunta(Pregunta pregunta) {
+
+        pregunta.setTestNumerico(this);
+
         preguntas.add(pregunta);
     }
 

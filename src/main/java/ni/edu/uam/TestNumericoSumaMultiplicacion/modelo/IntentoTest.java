@@ -2,6 +2,7 @@ package ni.edu.uam.TestNumericoSumaMultiplicacion.modelo;
 
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 import javax.persistence.*;
@@ -55,7 +56,13 @@ public class IntentoTest {
     }
 
     public void registrarRespuesta(Respuesta respuesta) {
-        // Se implementará después
+
+        if (respuestas == null) {
+            respuestas = new ArrayList<>();
+        }
+
+        respuesta.setIntentoTest(this);
+        respuestas.add(respuesta);
     }
 
     public void finalizar() {
@@ -64,11 +71,11 @@ public class IntentoTest {
     }
 
     public void cerrarPorTiempo() {
-        estado = EstadoIntento.FINALIZADO;
+        estado = EstadoIntento.CANCELADO;
         fechaFin = LocalDateTime.now();
     }
 
-    public void calcularResultado(List<Respuesta> respuestas) {
+    public void calcularResultado() {
 
         aciertos = 0;
         errores = 0;
@@ -100,7 +107,11 @@ public class IntentoTest {
     }
 
     public String generarMensajeFinal() {
-        return MENSAJE_FINAL;
+
+        return "Resultados del examen\n" +
+                "Aciertos: " + aciertos + "\n" +
+                "Errores: " + errores + "\n" +
+                "Sin responder: " + sinResponder;
     }
 
     public boolean estaEnProgreso() {
@@ -108,5 +119,5 @@ public class IntentoTest {
     }
 
     @OneToMany(mappedBy = "intentoTest")
-    private List<Respuesta> respuestas;
+    private List<Respuesta> respuestas = new ArrayList<>();
 }

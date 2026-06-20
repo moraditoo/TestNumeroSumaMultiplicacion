@@ -59,10 +59,6 @@ public class Pregunta {
                 || respuestaCorrecta.equals("B"));
     }
 
-    public String calcularRespuestaCorrecta() {
-        return respuestaCorrecta;
-    }
-
     public boolean verificarRespuesta(String respuesta) {
         return respuestaCorrecta.equalsIgnoreCase(respuesta);
     }
