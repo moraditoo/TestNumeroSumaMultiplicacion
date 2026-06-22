@@ -4,7 +4,23 @@
 
 <web-app>
   <display-name>OpenXava Application</display-name>
-  
+
+  <!-- Carga inicial de datos (test y preguntas) al arrancar -->
+  <listener>
+    <listener-class>ni.edu.uam.TestNumericoSumaMultiplicacion.config.DatosInicialesListener</listener-class>
+  </listener>
+
+  <!-- API REST para la pagina web de los usuarios -->
+  <servlet>
+    <servlet-name>apiTest</servlet-name>
+    <servlet-class>ni.edu.uam.TestNumericoSumaMultiplicacion.api.ApiTestServlet</servlet-class>
+    <load-on-startup>4</load-on-startup>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>apiTest</servlet-name>
+    <url-pattern>/api/*</url-pattern>
+  </servlet-mapping>
+
   <!-- Evitar problema de bloqueo de archivos de IntelliJ en Windows -->
   <servlet>
     <servlet-name>jsp</servlet-name>
@@ -19,7 +35,7 @@
     <servlet-name>jsp</servlet-name>
     <url-pattern>*.jsp</url-pattern>
   </servlet-mapping>
-  
+
   <!-- Para cumplir con OWASP -->
   <error-page>
     <error-code>404</error-code>
@@ -29,5 +45,5 @@
     <error-code>500</error-code>
     <location>/WEB-INF/error500.html</location>
   </error-page>
-  
+
 </web-app>
