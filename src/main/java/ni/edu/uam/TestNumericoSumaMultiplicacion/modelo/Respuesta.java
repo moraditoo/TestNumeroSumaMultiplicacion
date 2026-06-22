@@ -2,13 +2,17 @@ package ni.edu.uam.TestNumericoSumaMultiplicacion.modelo;
 
 import javax.persistence.*;
 
+import org.openxava.annotations.*;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import org.openxava.annotations.*;
-
+/**
+ * Respuesta marcada por el usuario para una pregunta dentro de un intento.
+ * El valor puede ser "A", "B" o quedar en blanco (pregunta no respondida).
+ */
 @Entity
 @Getter
 @Setter
@@ -20,7 +24,6 @@ public class Respuesta {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long idRespuesta;
 
-    @Required
     @Column(length = 1)
     private String respuestaMarcada;
 
@@ -37,10 +40,8 @@ public class Respuesta {
     }
 
     public boolean esCorrecta() {
-        return pregunta != null &&
-                respuestaMarcada != null &&
-                respuestaMarcada.equalsIgnoreCase(
-                        pregunta.getRespuestaCorrecta()
-                );
+        return pregunta != null
+                && respuestaMarcada != null
+                && respuestaMarcada.equalsIgnoreCase(pregunta.getRespuestaCorrecta());
     }
 }
