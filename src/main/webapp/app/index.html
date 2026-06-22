@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Test Numerico BFA</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="css/styles.css" rel="stylesheet">
+</head>
+<body>
+
+  <!-- Membrete -->
+  <header class="masthead py-2">
+    <div class="container d-flex align-items-center justify-content-between">
+      <div class="d-flex align-items-center gap-2">
+        <div class="seal">BFA</div>
+        <div>
+          <div class="kicker">Bateria Factorial de Aptitudes</div>
+          <div class="title fs-5">Componente Numerico</div>
+        </div>
+      </div>
+      <div id="userBox" class="text-end d-none">
+        <div class="small fw-semibold" id="userName">&nbsp;</div>
+        <button id="btnLogout" class="btn btn-sm btn-outline-ink py-0 px-2 mt-1">Cerrar sesion</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="toast-host" id="toastHost"></div>
+
+  <!-- ============================ LOGIN ============================ -->
+  <section id="screenLogin" class="screen active">
+    <div class="login-wrap">
+      <div class="sheet login-card">
+        <div class="eyebrow mb-1">Acceso de candidatos</div>
+        <h1 class="h4 fw-bold mb-1">Inicie su sesion</h1>
+        <p class="muted small mb-4">Use el usuario y la contrasena registrados por su evaluador.</p>
+
+        <div class="mb-3">
+          <label class="form-label" for="loginUser">Usuario o correo</label>
+          <input type="text" id="loginUser" class="form-control" autocomplete="username" placeholder="su usuario">
+        </div>
+        <div class="mb-4">
+          <label class="form-label" for="loginPass">Contrasena</label>
+          <input type="password" id="loginPass" class="form-control" autocomplete="current-password" placeholder="su contrasena">
+        </div>
+        <button id="btnLogin" class="btn btn-ink w-100 py-2">Entrar</button>
+        <div id="loginError" class="text-danger small mt-3 d-none"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ PANEL ============================ -->
+  <section id="screenDashboard" class="screen">
+    <div class="container py-4 py-md-5">
+      <div class="mb-4">
+        <div class="divider-note mb-1">Seleccione un test</div>
+        <h2 class="h3 fw-bold mb-0">Pruebas disponibles</h2>
+        <p class="muted small">Cada test es independiente y dispone de 4 minutos. Marque A si el resultado es verdadero, B si es falso.</p>
+      </div>
+
+      <div id="testList" class="row g-3 mb-5">
+        <!-- tarjetas de test -->
+      </div>
+
+      <div class="d-flex align-items-center justify-content-between mb-2">
+        <div>
+          <div class="divider-note mb-1">Mis gestiones</div>
+          <h3 class="h5 fw-bold mb-0">Resultados anteriores</h3>
+        </div>
+        <button id="btnReload" class="btn btn-sm btn-outline-ink">Actualizar</button>
+      </div>
+      <div class="sheet p-3 p-md-4">
+        <div class="table-responsive">
+          <table class="table align-middle history-table mb-0">
+            <thead>
+              <tr>
+                <th>Fecha</th><th>Test</th><th>Tipo</th>
+                <th class="text-center">Aciertos</th>
+                <th class="text-center">Errores</th>
+                <th class="text-center">Sin responder</th>
+                <th class="text-center">Tiempo</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody id="historyBody">
+              <tr><td colspan="8" class="text-center muted py-4">Sin intentos registrados todavia.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================= INSTRUCCIONES ======================= -->
+  <section id="screenInstructions" class="screen">
+    <div class="container py-4 py-md-5" style="max-width: 720px;">
+      <div class="sheet p-4 p-md-5">
+        <div class="divider-note mb-2">Instrucciones</div>
+        <h2 class="h3 fw-bold mb-3" id="instrTitle">Test</h2>
+        <p class="mb-3" id="instrText">
+          Verifique cada operacion. Si el resultado mostrado es exacto marque
+          <strong>A — Verdadero</strong>; si no lo es marque <strong>B — Falso</strong>.
+          Existe una sola respuesta correcta por ejercicio.
+        </p>
+        <ul class="muted small mb-4">
+          <li>Dispone de <strong>4 minutos</strong>. El reloj inicia al comenzar.</li>
+          <li>Trabaje con rapidez y precision; puede dejar ejercicios sin responder.</li>
+          <li>Al agotarse el tiempo, el test se cierra y se califica automaticamente.</li>
+        </ul>
+        <div class="d-flex gap-2">
+          <button id="btnBackToDash" class="btn btn-outline-ink">Volver</button>
+          <button id="btnStartTest" class="btn btn-teal px-4">Comenzar</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================== TEST =========================== -->
+  <section id="screenTest" class="screen">
+    <div class="container py-3 py-md-4" style="max-width: 760px;">
+
+      <div class="d-flex align-items-center justify-content-between mb-3">
+        <div>
+          <div class="divider-note" id="testRunningTipo">&nbsp;</div>
+          <div class="fw-bold" id="testRunningName">&nbsp;</div>
+        </div>
+        <div id="examClock" class="exam-clock">4:00</div>
+      </div>
+
+      <div class="progress mb-3" style="height: 6px;">
+        <div id="testProgress" class="progress-bar bg-dark" style="width: 0%"></div>
+      </div>
+
+      <div class="sheet p-3 p-md-4 mb-3">
+        <div class="d-flex align-items-center justify-content-between">
+          <span class="badge-soft" id="questionCounter">Pregunta 1</span>
+          <span class="prompt-q">El resultado mostrado, ¿es correcto?</span>
+        </div>
+
+        <div class="operation-block">
+          <div class="op" id="opText">&nbsp;</div>
+          <div class="equals" id="opResult">&nbsp;</div>
+        </div>
+
+        <div class="row g-2">
+          <div class="col-12 col-sm-6">
+            <button class="bubble-option" data-value="A">
+              <span class="bubble">A</span>
+              <span><span class="label-text">Verdadero</span><br><span class="label-sub">El resultado es correcto</span></span>
+            </button>
+          </div>
+          <div class="col-12 col-sm-6">
+            <button class="bubble-option" data-value="B">
+              <span class="bubble">B</span>
+              <span><span class="label-text">Falso</span><br><span class="label-sub">El resultado es incorrecto</span></span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex align-items-center justify-content-between mb-3">
+        <button id="btnPrev" class="btn btn-outline-ink">Anterior</button>
+        <button id="btnNext" class="btn btn-ink">Siguiente</button>
+        <button id="btnFinish" class="btn btn-teal d-none px-4">Finalizar test</button>
+      </div>
+
+      <div class="sheet p-3">
+        <div class="divider-note mb-2">Hoja de respuestas</div>
+        <div class="answer-rail" id="answerRail"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================= RESULTADO ========================= -->
+  <section id="screenResult" class="screen">
+    <div class="container py-4 py-md-5" style="max-width: 680px;">
+      <div class="sheet p-4 p-md-5 text-center">
+        <div class="seal mx-auto mb-3">BFA</div>
+        <h2 class="h3 fw-bold mb-1">Muchas gracias por realizar el test</h2>
+        <p class="muted mb-4" id="resultSummary">&nbsp;</p>
+
+        <div class="row g-3 mb-4">
+          <div class="col-4"><div class="result-stat stat-correct"><div class="num" id="resAciertos">0</div><div class="lbl">Aciertos</div></div></div>
+          <div class="col-4"><div class="result-stat stat-wrong"><div class="num" id="resErrores">0</div><div class="lbl">Errores</div></div></div>
+          <div class="col-4"><div class="result-stat stat-blank"><div class="num" id="resBlanco">0</div><div class="lbl">Sin responder</div></div></div>
+        </div>
+
+        <p class="divider-note mb-4" id="resTiempo">&nbsp;</p>
+        <button id="btnResultDash" class="btn btn-ink px-4">Volver al panel</button>
+      </div>
+    </div>
+  </section>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
