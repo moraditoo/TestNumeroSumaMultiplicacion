@@ -44,13 +44,26 @@
 		</dependency>
 		-->
 		
-		<!-- PostgreSQL 
+		<!-- PostgreSQL (base de datos Estudiantedb) -->
 		<dependency>
 			<groupId>org.postgresql</groupId>
     		<artifactId>postgresql</artifactId>
     		<version>42.7.10</version>
 		</dependency>
-		-->
+
+		<!-- Cifrado de contrasenas con BCrypt -->
+		<dependency>
+			<groupId>org.mindrot</groupId>
+			<artifactId>jbcrypt</artifactId>
+			<version>0.4</version>
+		</dependency>
+
+		<!-- JSON para la API REST del frontend -->
+		<dependency>
+			<groupId>com.google.code.gson</groupId>
+			<artifactId>gson</artifactId>
+			<version>2.10.1</version>
+		</dependency>
 		
 		<!-- Oracle 
 		<dependency>

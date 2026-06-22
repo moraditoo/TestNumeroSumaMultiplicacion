@@ -17,12 +17,13 @@
 	correspodiente a tu base de datos al pom.xml de tu proyecto.	
 	-->
 	 
-	<!-- HSQLDB -->   	
+	<!-- HSQLDB (desactivado: ahora se usa PostgreSQL)
     <Resource name="jdbc/TestNumericoSumaMultiplicacionDS" auth="Container" type="javax.sql.DataSource"
 	      maxTotal="20" maxIdle="5" maxWaitMillis="10000"
 	      username="sa" password="" 
 	      driverClassName="org.hsqldb.jdbc.JDBCDriver"
 	      url="jdbc:hsqldb:hsql://localhost:1666"/>
+	-->
 	      
 	<!-- MySQL       
     <Resource name="jdbc/TestNumericoSumaMultiplicacionDS" auth="Container" type="javax.sql.DataSource"
@@ -32,13 +33,12 @@
 	      url="jdbc:mysql://localhost:3306/TestNumericoSumaMultiplicaciondb"/>	      
 	-->      
 	
-	<!-- PostgreSQL 
+	<!-- PostgreSQL: base de datos Estudiantedb -->
 	<Resource name="jdbc/TestNumericoSumaMultiplicacionDS" auth="Container" type="javax.sql.DataSource"
 	      maxTotal="20" maxIdle="5" maxWaitMillis="10000"
-	      username="postgres" password="" 
+	      username="postgres" password="1234" 
 	      driverClassName="org.postgresql.Driver" 
-	      url="jdbc:postgresql://localhost/TestNumericoSumaMultiplicaciondb"/>
-	-->
+	      url="jdbc:postgresql://localhost:5432/Estudiantedb"/>
 	
 	<!-- Oracle 
 	<Resource name="jdbc/TestNumericoSumaMultiplicacionDS" auth="Container" type="javax.sql.DataSource"
