@@ -2,23 +2,6 @@
 
 <!DOCTYPE aplicacion SYSTEM "dtds/aplicacion.dtd">
 
-<aplicacion nombre="TestNumericoSumaMultiplicacion"> 
-	
-	<!--
-	Un módulo por defecto se asume para cada
-	controlador en <modulo-defecto/> 
-	-->
-	<modulo-defecto>		  
-		<controlador nombre="Typical"/>		
-	</modulo-defecto>
-	
-	<!--
-	Podemos definir módulos adicionales, por ejemplo: 	
-	<modulo nombre="ProfesorSoloLectura">
-		<modelo nombre="Profesor"/>
-		<controlador nombre="Print"/>
-	</modulo>		
-	-->	  
-		
-</aplicacion>
+<aplicacion nombre="TestNumericoSumaMultiplicacion">
 
+</aplicacion>
