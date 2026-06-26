@@ -23,6 +23,7 @@
   var estado = {
     usuario: null,
     test: null,
+    idIntentoTest: null,
     preguntas: [],
     respuestas: {},     // idPregunta -> "A" | "B"
     indice: 0,
@@ -33,6 +34,15 @@
 
   // ---- Utilidades de pantalla ----------------------------------------
   function $(id) { return document.getElementById(id); }
+  function escapeHtml(valor) {
+    return String(valor == null ? "" : valor)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
   function mostrar(idPantalla) {
     document.querySelectorAll(".screen").forEach(function (s) { s.classList.remove("active"); });
     $(idPantalla).classList.add("active");
@@ -44,10 +54,20 @@
     var div = document.createElement("div");
     div.className = "toast align-items-center text-bg-" + (tipo || "dark") + " border-0 show mb-2";
     div.role = "alert";
-    div.innerHTML = '<div class="d-flex"><div class="toast-body">' + mensaje +
-      '</div><button type="button" class="btn-close btn-close-white me-2 m-auto"></button></div>';
+    var fila = document.createElement("div");
+    fila.className = "d-flex";
+    var cuerpo = document.createElement("div");
+    cuerpo.className = "toast-body";
+    cuerpo.textContent = mensaje;
+    var cerrar = document.createElement("button");
+    cerrar.type = "button";
+    cerrar.className = "btn-close btn-close-white me-2 m-auto";
+    cerrar.setAttribute("aria-label", "Cerrar");
+    fila.appendChild(cuerpo);
+    fila.appendChild(cerrar);
+    div.appendChild(fila);
     host.appendChild(div);
-    div.querySelector(".btn-close").addEventListener("click", function () { div.remove(); });
+    cerrar.addEventListener("click", function () { div.remove(); });
     setTimeout(function () { div.remove(); }, 4000);
   }
 
@@ -70,6 +90,7 @@
     var usuario = $("loginUser").value.trim();
     var contrasena = $("loginPass").value;
     var err = $("loginError");
+    var btn = $("btnLogin");
     err.classList.add("d-none");
 
     if (!usuario || !contrasena) {
@@ -77,6 +98,8 @@
       err.classList.remove("d-none");
       return;
     }
+    btn.disabled = true;
+    btn.textContent = "Validando...";
     try {
       var u = await api("/login", {
         method: "POST",
@@ -89,12 +112,16 @@
     } catch (e) {
       err.textContent = e.message;
       err.classList.remove("d-none");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Entrar al panel";
     }
   }
 
   function cerrarSesion() {
     detenerTimer();
     estado.usuario = null;
+    estado.idIntentoTest = null;
     sessionStorage.removeItem("bfaUsuario");
     $("userBox").classList.add("d-none");
     $("loginUser").value = "";
@@ -103,7 +130,10 @@
   }
 
   function entrarAlPanel() {
-    $("userName").textContent = estado.usuario.nombres + " " + estado.usuario.apellidos;
+    var nombre = [estado.usuario.nombres, estado.usuario.apellidos]
+      .filter(Boolean)
+      .join(" ");
+    $("userName").textContent = nombre || estado.usuario.nombreUsuario || "Usuario";
     $("userBox").classList.remove("d-none");
     mostrar("screenDashboard");
     cargarTests();
@@ -127,33 +157,42 @@
         var col = document.createElement("div");
         col.className = "col-12 col-md-6";
         var esMult = (t.tipoTest || "").toUpperCase().indexOf("MULT") !== -1;
+        var nombre = escapeHtml(t.nombre || "Test numerico");
+        var descripcion = escapeHtml(t.descripcion || "Ejercicios disponibles para evaluacion.");
         col.innerHTML =
-          '<div class="sheet test-card h-100">' +
+          '<div class="sheet test-card h-100" role="button" tabindex="0">' +
             '<div class="d-flex justify-content-between align-items-start mb-2">' +
               '<span class="test-tag">' + (esMult ? "Multiplicaciones" : "Sumas") + '</span>' +
               '<span class="divider-note">4 min</span>' +
             '</div>' +
-            '<h3 class="h5 fw-bold mb-1">' + t.nombre + '</h3>' +
-            '<p class="test-meta mb-3">' + (t.descripcion || "") + '</p>' +
+            '<h3 class="h5 fw-bold mb-1">' + nombre + '</h3>' +
+            '<p class="test-meta mb-3">' + descripcion + '</p>' +
             '<div class="d-flex justify-content-between align-items-center">' +
               '<span class="test-meta"><strong>' + t.cantidadPreguntas + '</strong> preguntas</span>' +
               '<span class="btn btn-sm btn-teal">Realizar test</span>' +
             '</div>' +
           '</div>';
-        col.querySelector(".test-card").addEventListener("click", function () { abrirInstrucciones(t); });
+        var tarjeta = col.querySelector(".test-card");
+        tarjeta.addEventListener("click", function () { abrirInstrucciones(t); });
+        tarjeta.addEventListener("keydown", function (e) {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            abrirInstrucciones(t);
+          }
+        });
         cont.appendChild(col);
       });
     } catch (e) {
-      cont.innerHTML = '<div class="col-12 text-danger small">No se pudieron cargar los tests: ' + e.message + '</div>';
+      cont.innerHTML = '<div class="col-12 text-danger small">No se pudieron cargar los tests: ' + escapeHtml(e.message) + '</div>';
     }
   }
 
   async function cargarHistorial() {
     var tbody = $("historyBody");
     try {
-      var lista = await api("/intentos?idUsuario=" + estado.usuario.idUsuario, {});
+      var lista = await api("/intentos?idUsuario=" + encodeURIComponent(estado.usuario.idUsuario), {});
       if (!lista.length) {
-        tbody.innerHTML = '<tr><td colspan="8" class="text-center muted py-4">Sin intentos registrados todavia.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center muted py-4">Sin intentos registrados todavia.</td></tr>';
         return;
       }
       tbody.innerHTML = "";
@@ -162,18 +201,14 @@
         var tr = document.createElement("tr");
         tr.innerHTML =
           "<td class='mono small'>" + formatearFecha(i.fechaInicio) + "</td>" +
-          "<td>" + i.test + "</td>" +
+          "<td>" + escapeHtml(i.test) + "</td>" +
           "<td><span class='badge-soft " + (esMult ? "badge-tipo-mult" : "badge-tipo-sumas") + "'>" +
               (esMult ? "MULT" : "SUMAS") + "</span></td>" +
-          "<td class='text-center fw-semibold' style='color:var(--correct)'>" + i.aciertos + "</td>" +
-          "<td class='text-center fw-semibold' style='color:var(--wrong)'>" + i.errores + "</td>" +
-          "<td class='text-center muted'>" + i.sinResponder + "</td>" +
-          "<td class='text-center mono small'>" + formatearTiempo(i.tiempoUsadoSegundos) + "</td>" +
-          "<td><span class='badge-soft'>" + traducirEstado(i.estado) + "</span></td>";
+          "<td><span class='badge-soft'>" + escapeHtml(traducirEstado(i.estado)) + "</span></td>";
         tbody.appendChild(tr);
       });
     } catch (e) {
-      tbody.innerHTML = '<tr><td colspan="8" class="text-center text-danger py-3">' + e.message + '</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="4" class="text-center text-danger py-3">' + escapeHtml(e.message) + '</td></tr>';
     }
   }
 
@@ -199,19 +234,28 @@
   // ====================================================================
   async function comenzarTest() {
     try {
-      var preguntas = await api("/tests/" + estado.test.idTestNumerico + "/preguntas", {});
+      var inicio = await api("/intentos/iniciar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          idUsuario: estado.usuario.idUsuario,
+          idTestNumerico: estado.test.idTestNumerico
+        })
+      });
+      var preguntas = inicio.preguntas || [];
       if (!preguntas.length) {
         toast("Este test no tiene preguntas activas.", "warning");
         return;
       }
+      estado.idIntentoTest = inicio.idIntentoTest;
       estado.preguntas = preguntas;
       estado.respuestas = {};
       estado.indice = 0;
-      estado.segundosRestantes = 4 * 60;
+      estado.segundosRestantes = inicio.tiempoLimiteSegundos || (4 * 60);
 
       $("testRunningName").textContent = estado.test.nombre;
       var esMult = (estado.test.tipoTest || "").toUpperCase().indexOf("MULT") !== -1;
-      $("testRunningTipo").textContent = esMult ? "Numerico — Multiplicaciones" : "Numerico — Sumas";
+      $("testRunningTipo").textContent = esMult ? "Numerico - Multiplicaciones" : "Numerico - Sumas";
 
       construirRiel();
       mostrar("screenTest");
@@ -229,7 +273,17 @@
       var dot = document.createElement("div");
       dot.className = "rail-dot";
       dot.textContent = (idx + 1);
+      dot.tabIndex = 0;
+      dot.setAttribute("role", "button");
+      dot.setAttribute("aria-label", "Ir a la pregunta " + (idx + 1));
       dot.addEventListener("click", function () { estado.indice = idx; pintarPregunta(); });
+      dot.addEventListener("keydown", function (e) {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          estado.indice = idx;
+          pintarPregunta();
+        }
+      });
       rail.appendChild(dot);
     });
   }
@@ -245,6 +299,7 @@
 
   function pintarPregunta() {
     var p = estado.preguntas[estado.indice];
+    if (!p) return;
     $("questionCounter").textContent = "Pregunta " + (estado.indice + 1) + " de " + estado.preguntas.length;
     $("opText").textContent = p.operacion;
     $("opResult").textContent = formatearNumero(p.resultadoMostrado);
@@ -315,13 +370,12 @@
     });
 
     try {
-      var r = await api("/intentos", {
+      var r = await api("/intentos/finalizar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          idIntentoTest: estado.idIntentoTest,
           idUsuario: estado.usuario.idUsuario,
-          idTestNumerico: estado.test.idTestNumerico,
-          cerradoPorTiempo: !!porTiempo,
           respuestas: respuestas
         })
       });
@@ -334,13 +388,10 @@
   }
 
   function mostrarResultado(r, porTiempo) {
-    $("resAciertos").textContent = r.aciertos;
-    $("resErrores").textContent = r.errores;
-    $("resBlanco").textContent = r.sinResponder;
-    $("resultSummary").textContent =
-      (porTiempo ? "El tiempo se agoto. " : "") +
-      "Respondio " + (r.aciertos + r.errores) + " de " + r.cantidadPreguntas + " ejercicios.";
-    $("resTiempo").textContent = "Tiempo utilizado: " + formatearTiempo(r.tiempoUsadoSegundos);
+    estado.idIntentoTest = null;
+    $("resultSummary").textContent = (r && r.cerradoPorTiempo) || porTiempo
+      ? "El tiempo se agoto y sus respuestas fueron registradas."
+      : "Sus respuestas fueron registradas correctamente.";
     mostrar("screenResult");
   }
 

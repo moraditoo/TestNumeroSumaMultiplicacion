@@ -3,7 +3,9 @@ package ni.edu.uam.TestNumericoSumaMultiplicacion.api;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import javax.persistence.EntityManager;
@@ -20,7 +22,6 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
-import ni.edu.uam.TestNumericoSumaMultiplicacion.modelo.EstadoIntento;
 import ni.edu.uam.TestNumericoSumaMultiplicacion.modelo.IntentoTest;
 import ni.edu.uam.TestNumericoSumaMultiplicacion.modelo.Pregunta;
 import ni.edu.uam.TestNumericoSumaMultiplicacion.modelo.Respuesta;
@@ -37,8 +38,9 @@ import ni.edu.uam.TestNumericoSumaMultiplicacion.util.PasswordUtil;
  *   POST /api/login                 -> autentica un Usuario (usuario o correo + contrasena)
  *   GET  /api/tests                 -> lista de test disponibles (con preguntas activas)
  *   GET  /api/tests/{id}/preguntas  -> preguntas activas de un test (SIN la respuesta correcta)
- *   POST /api/intentos              -> guarda un intento, califica en el servidor y devuelve el resultado
- *   GET  /api/intentos?idUsuario=N  -> historial de intentos de un usuario (gestiones)
+ *   POST /api/intentos/iniciar      -> crea el intento, arranca el tiempo y devuelve preguntas
+ *   POST /api/intentos/finalizar    -> finaliza, califica y guarda respuestas en el servidor
+ *   GET  /api/intentos?idUsuario=N  -> historial publico de intentos del usuario
  *
  * La respuesta correcta nunca se envia al navegador: la calificacion se hace aqui.
  */
@@ -102,8 +104,12 @@ public class ApiTestServlet extends HttpServlet {
 
             if (ruta.equals("/login")) {
                 login(json, resp);
+            } else if (ruta.equals("/intentos/iniciar")) {
+                iniciarIntento(json, resp);
+            } else if (ruta.equals("/intentos/finalizar")) {
+                finalizarIntento(json, resp);
             } else if (ruta.equals("/intentos")) {
-                guardarIntento(json, resp);
+                error(resp, 410, "Use /intentos/iniciar y /intentos/finalizar.");
             } else {
                 error(resp, 404, "Ruta no encontrada: " + ruta);
             }
@@ -205,16 +211,14 @@ public class ApiTestServlet extends HttpServlet {
         escribir(resp, 200, arreglo);
     }
 
-    /** Crea y califica un intento. Espera {idUsuario, idTestNumerico, cerradoPorTiempo, respuestas:[{idPregunta, respuestaMarcada}]}. */
-    private void guardarIntento(JsonObject json, HttpServletResponse resp) throws IOException {
+    /** Crea un intento antes de mostrar las preguntas, para medir el tiempo desde el servidor. */
+    private void iniciarIntento(JsonObject json, HttpServletResponse resp) throws IOException {
         EntityManager em = XPersistence.getManager();
 
         Long idUsuario = numero(json, "idUsuario");
         Long idTest = numero(json, "idTestNumerico");
-        boolean cerradoPorTiempo = json.has("cerradoPorTiempo") && json.get("cerradoPorTiempo").getAsBoolean();
-
         if (idUsuario == null || idTest == null) {
-            error(resp, 400, "Faltan datos del intento (usuario o test).");
+            error(resp, 400, "Faltan datos para iniciar el intento.");
             return;
         }
 
@@ -224,46 +228,73 @@ public class ApiTestServlet extends HttpServlet {
             error(resp, 404, "Usuario o test inexistente.");
             return;
         }
-
-        IntentoTest intento = test.iniciarTest(usuario);
-
-        List<JsonObject> entradas = new ArrayList<>();
-        if (json.has("respuestas") && json.get("respuestas").isJsonArray()) {
-            for (var elem : json.getAsJsonArray("respuestas")) {
-                entradas.add(elem.getAsJsonObject());
-            }
+        if (!usuario.isActivo() || !test.isActivo()) {
+            error(resp, 403, "El usuario o el test no esta activo.");
+            return;
         }
 
-        for (JsonObject entrada : entradas) {
-            Long idPregunta = numero(entrada, "idPregunta");
-            String marcada = texto(entrada, "respuestaMarcada");
-            Pregunta pregunta = idPregunta == null ? null : em.find(Pregunta.class, idPregunta);
-            if (pregunta == null) {
-                continue;
-            }
-            Respuesta r = new Respuesta();
-            r.setPregunta(pregunta);
-            r.setRespuestaMarcada(marcada == null ? null : marcada.trim().toUpperCase());
-            intento.registrarRespuesta(r);
+        List<Pregunta> preguntas = obtenerPreguntasActivas(em, idTest);
+        if (preguntas.isEmpty()) {
+            error(resp, 409, "Este test no tiene preguntas activas.");
+            return;
         }
 
-        if (cerradoPorTiempo) {
+        IntentoTest intento = new IntentoTest();
+        intento.setUsuario(usuario);
+        intento.setTestNumerico(test);
+        intento.setCantidadPreguntas(preguntas.size());
+        intento.iniciar();
+        em.persist(intento);
+        em.flush();
+
+        JsonObject salida = new JsonObject();
+        salida.addProperty("idIntentoTest", intento.getIdIntentoTest());
+        salida.addProperty("fechaInicio", intento.getFechaInicio().toString());
+        salida.addProperty("tiempoLimiteSegundos", TestNumerico.TIEMPO_LIMITE_MINUTOS * 60);
+        salida.add("preguntas", preguntasComoJson(preguntas));
+        escribir(resp, 200, salida);
+    }
+
+    /** Finaliza un intento ya iniciado y califica sin exponer resultados al candidato. */
+    private void finalizarIntento(JsonObject json, HttpServletResponse resp) throws IOException {
+        EntityManager em = XPersistence.getManager();
+
+        Long idIntento = numero(json, "idIntentoTest");
+        Long idUsuario = numero(json, "idUsuario");
+        if (idIntento == null || idUsuario == null) {
+            error(resp, 400, "Faltan datos para finalizar el intento.");
+            return;
+        }
+
+        IntentoTest intento = em.find(IntentoTest.class, idIntento);
+        if (intento == null) {
+            error(resp, 404, "Intento inexistente.");
+            return;
+        }
+        if (intento.getUsuario() == null || !idUsuario.equals(intento.getUsuario().getIdUsuario())) {
+            error(resp, 403, "El intento no pertenece al usuario indicado.");
+            return;
+        }
+        if (!intento.estaEnProgreso()) {
+            error(resp, 409, "El intento ya fue finalizado.");
+            return;
+        }
+
+        List<JsonObject> entradas = obtenerEntradasRespuestas(json);
+        registrarRespuestas(em, intento, entradas);
+
+        boolean excedioTiempo = intento.excedeTiempoLimite(TestNumerico.TIEMPO_LIMITE_MINUTOS);
+        if (excedioTiempo) {
             intento.cerrarPorTiempo();
         } else {
             intento.finalizar();
         }
         intento.calcularResultado();
 
-        em.persist(intento);
-
         JsonObject salida = new JsonObject();
         salida.addProperty("idIntentoTest", intento.getIdIntentoTest());
-        salida.addProperty("aciertos", intento.getAciertos());
-        salida.addProperty("errores", intento.getErrores());
-        salida.addProperty("sinResponder", intento.getSinResponder());
-        salida.addProperty("cantidadPreguntas", intento.getCantidadPreguntas());
         salida.addProperty("estado", intento.getEstado().name());
-        salida.addProperty("tiempoUsadoSegundos", intento.calcularTiempoUsado());
+        salida.addProperty("cerradoPorTiempo", excedioTiempo);
         salida.addProperty("mensaje", intento.generarMensajeFinal());
         escribir(resp, 200, salida);
     }
@@ -290,12 +321,7 @@ public class ApiTestServlet extends HttpServlet {
             o.addProperty("test", i.getTestNumerico() != null ? i.getTestNumerico().getNombre() : "");
             o.addProperty("tipoTest", i.getTestNumerico() != null ? i.getTestNumerico().getTipoTest() : "");
             o.addProperty("fechaInicio", i.getFechaInicio() != null ? i.getFechaInicio().toString() : "");
-            o.addProperty("aciertos", i.getAciertos());
-            o.addProperty("errores", i.getErrores());
-            o.addProperty("sinResponder", i.getSinResponder());
-            o.addProperty("cantidadPreguntas", i.getCantidadPreguntas());
             o.addProperty("estado", i.getEstado() != null ? i.getEstado().name() : "");
-            o.addProperty("tiempoUsadoSegundos", i.calcularTiempoUsado());
             arreglo.add(o);
         }
         escribir(resp, 200, arreglo);
@@ -312,6 +338,69 @@ public class ApiTestServlet extends HttpServlet {
             return json.has(clave) && !json.get(clave).isJsonNull() ? json.get(clave).getAsLong() : null;
         } catch (Exception e) {
             return null;
+        }
+    }
+
+    private String normalizarRespuesta(String respuesta) {
+        if (respuesta == null) {
+            return null;
+        }
+        String valor = respuesta.trim().toUpperCase();
+        return valor.equals("A") || valor.equals("B") ? valor : null;
+    }
+
+    private List<Pregunta> obtenerPreguntasActivas(EntityManager em, Long idTest) {
+        return em.createQuery(
+                "from Pregunta p where p.testNumerico.idTestNumerico = :id and p.activa = true "
+                + "order by p.numeroPregunta", Pregunta.class)
+                .setParameter("id", idTest)
+                .getResultList();
+    }
+
+    private JsonArray preguntasComoJson(List<Pregunta> preguntas) {
+        JsonArray arreglo = new JsonArray();
+        for (Pregunta p : preguntas) {
+            JsonObject o = new JsonObject();
+            o.addProperty("idPregunta", p.getIdPregunta());
+            o.addProperty("numeroPregunta", p.getNumeroPregunta());
+            o.addProperty("operacion", p.getOperacion());
+            o.addProperty("resultadoMostrado", p.getResultadoMostrado());
+            arreglo.add(o);
+        }
+        return arreglo;
+    }
+
+    private List<JsonObject> obtenerEntradasRespuestas(JsonObject json) {
+        List<JsonObject> entradas = new ArrayList<>();
+        if (json.has("respuestas") && json.get("respuestas").isJsonArray()) {
+            for (var elem : json.getAsJsonArray("respuestas")) {
+                entradas.add(elem.getAsJsonObject());
+            }
+        }
+        return entradas;
+    }
+
+    private void registrarRespuestas(EntityManager em, IntentoTest intento, List<JsonObject> entradas) {
+        Long idTest = intento.getTestNumerico() != null ? intento.getTestNumerico().getIdTestNumerico() : null;
+        Set<Long> preguntasProcesadas = new HashSet<>();
+        for (JsonObject entrada : entradas) {
+            Long idPregunta = numero(entrada, "idPregunta");
+            if (idPregunta == null || !preguntasProcesadas.add(idPregunta)) {
+                continue;
+            }
+
+            Pregunta pregunta = em.find(Pregunta.class, idPregunta);
+            if (pregunta == null
+                    || !pregunta.isActiva()
+                    || pregunta.getTestNumerico() == null
+                    || !pregunta.getTestNumerico().getIdTestNumerico().equals(idTest)) {
+                continue;
+            }
+
+            Respuesta r = new Respuesta();
+            r.setPregunta(pregunta);
+            r.setRespuestaMarcada(normalizarRespuesta(texto(entrada, "respuestaMarcada")));
+            intento.registrarRespuesta(r);
         }
     }
 
