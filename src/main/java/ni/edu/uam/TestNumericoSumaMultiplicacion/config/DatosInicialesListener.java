@@ -9,6 +9,7 @@ import org.openxava.jpa.XPersistence;
 import ni.edu.uam.TestNumericoSumaMultiplicacion.modelo.Pregunta;
 import ni.edu.uam.TestNumericoSumaMultiplicacion.modelo.Registrador;
 import ni.edu.uam.TestNumericoSumaMultiplicacion.modelo.TestNumerico;
+import ni.edu.uam.TestNumericoSumaMultiplicacion.modelo.Usuario;
 
 /**
  * Carga inicial de datos. Al arrancar la aplicacion, si todavia no existen test
@@ -102,6 +103,7 @@ public class DatosInicialesListener implements ServletContextListener {
             Long existentes = em.createQuery(
                     "select count(t) from TestNumerico t", Long.class).getSingleResult();
             if (existentes != null && existentes > 0) {
+                asegurarUsuarioDemo(em);
                 XPersistence.commit();
                 yaIntentado = true;
                 return; // Ya hay datos: no se vuelve a sembrar.
@@ -114,6 +116,8 @@ public class DatosInicialesListener implements ServletContextListener {
             registrador.setCorreo("registrador@uam.edu.ni");
             registrador.setContrasena("registrador123"); // se cifra sola en @PrePersist
             em.persist(registrador);
+
+            asegurarUsuarioDemo(em);
 
             TestNumerico sumas = crearTest(em,
                     "Numerico Sumas",
@@ -152,6 +156,25 @@ public class DatosInicialesListener implements ServletContextListener {
         t.setActivo(true);
         em.persist(t);
         return t;
+    }
+
+    private static void asegurarUsuarioDemo(EntityManager em) {
+        Long existentes = em.createQuery(
+                "select count(u) from Usuario u where u.nombreUsuario = :usuario", Long.class)
+                .setParameter("usuario", "candidato")
+                .getSingleResult();
+        if (existentes != null && existentes > 0) {
+            return;
+        }
+
+        Usuario usuario = new Usuario();
+        usuario.setNombres("Candidato");
+        usuario.setApellidos("Demo");
+        usuario.setNombreUsuario("candidato");
+        usuario.setCorreo("candidato@uam.edu.ni");
+        usuario.setContrasena("candidato123");
+        usuario.setEdad(18);
+        em.persist(usuario);
     }
 
     private static void crearPregunta(EntityManager em, TestNumerico test, Registrador registrador, String[] fila) {
