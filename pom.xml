@@ -28,6 +28,14 @@
 			<artifactId>openxava-7.7-chat-jdk17</artifactId>
 			<version>${openxava.version}</version>
 		</dependency>
+
+		<!-- Lombok es usado por las entidades y vistas del proyecto -->
+		<dependency>
+			<groupId>org.projectlombok</groupId>
+			<artifactId>lombok</artifactId>
+			<version>1.18.40</version>
+			<scope>provided</scope>
+		</dependency>
 		
 		<!-- 
 		Para acceder a tu base de datos descomenta la entrada correspondiente 
