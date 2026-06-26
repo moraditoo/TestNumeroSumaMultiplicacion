@@ -1,6 +1,7 @@
 package ni.edu.uam.TestNumericoSumaMultiplicacion.modelo;
 
 import java.time.LocalDateTime;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -57,6 +58,8 @@ public class IntentoTest {
 
     private int sinResponder;
 
+    private int puntajeDirecto;
+
     @OneToMany(mappedBy = "intentoTest", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Respuesta> respuestas = new ArrayList<>();
 
@@ -85,7 +88,7 @@ public class IntentoTest {
 
     /**
      * Recorre las respuestas y cuenta aciertos, errores y preguntas sin responder.
-     * Al terminar deja el intento en estado CALIFICADO.
+     * Al terminar conserva CANCELADO si expiro el tiempo; si no, deja CALIFICADO.
      */
     public void calcularResultado() {
         aciertos = 0;
@@ -110,7 +113,11 @@ public class IntentoTest {
             sinResponder += (cantidadPreguntas - respondidasOEnBlanco);
         }
 
-        estado = EstadoIntento.CALIFICADO;
+        puntajeDirecto = Math.max(0, aciertos - errores);
+
+        if (estado != EstadoIntento.CANCELADO) {
+            estado = EstadoIntento.CALIFICADO;
+        }
     }
 
     public int calcularTiempoUsado() {
@@ -118,6 +125,13 @@ public class IntentoTest {
             return 0;
         }
         return (int) java.time.Duration.between(fechaInicio, fechaFin).toSeconds();
+    }
+
+    public boolean excedeTiempoLimite(int minutos) {
+        if (fechaInicio == null) {
+            return false;
+        }
+        return Duration.between(fechaInicio, LocalDateTime.now()).toSeconds() >= minutos * 60L;
     }
 
     public String generarMensajeFinal() {
